@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title> Genetic expression graphs </title>
+		<link rel='stylesheet' type='text/css' href="{{ url_for('static',filename='css/style.css') }}">
+		<meta charset="utf-8">
+		<meta name = 'description' content="A website designed to display expression graphs">
+		<script type="text/javascript"  src="http://ajax.googleapis.com/ajax/libs/jquery/1.5.1/jquery.min.js"></script>
+		<script type="text/javascript" src="{{ url_for('static',filename='js/sijax/sijax.js')|safe }}"></script>
+		<script type="text/javascript">
+		{{ g.sijax.get_js()|safe }}
+		</script>
+	</head>
+	<body>
+		<header>
+
+		<!-- TODO: ADD NEW LOGO 
+		Probably on nav, on the left side.
+		Should use css to make sure size is correct
+		-->
+
+			<img src="{{ url_for('static',filename='images/LOGO.png') }}" style="height:200px" />
+			<br>
+			<br>
+			<br>
+			<nav>
+				<a {% if "pan_immune" in request.path.split('/') %}class="active"{% endif %} href="{{ url_for('pan_immune') }}"> <strong> pan_immune </strong></a>
+				<a {% if "cell_type_specific" in request.path.split('/') %}class="active"{% endif %} href="{{ url_for('cell_type_specific') }}"> <strong> cell_type_specific </strong></a>
+				<a {% if "about" in request.path.split('/') %} class="active"{% endif %} href="{{ url_for('about') }}"> <strong> About </strong></a>
+			</nav>
+		</header>
+		<main>
+			<div id = 'content'>
+			<br>
+				{% block body %} {% endblock %}
+			</div>
+		</main>
+		<footer>
+		</footer>
+	</body>
+</html>
