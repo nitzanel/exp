@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class='center'>
+	<div class='search'>
+		<h1> Male vs. Female Per Cell Type gene expression  </h1>
+		<p style="font-size: medium;">
+			Displays expression levels in selected cell type in males and females in four datasets.
+		</p>
+		<form action="{{ url_for('cell_type_specific') }}" method="post" id="search_gene">
+			{{ form.hidden_tag() }}
+				Gene Symbol {{ form.gene_name(list="genes_datalist") }}
+				<datalist id="genes_datalist" >
+				</datalist>
+				<br>
+
+				Cell Type <hidden style="padding-left : 32px"/> {{ form.cell_type }}
+			<p><input type="submit" name="search"></p>
+		</form>
+		<br>
+			<p>
+				{% with messages = get_flashed_messages() %}
+					{% for message in messages %}
+						{{message}}
+					{% endfor %}
+				{% endwith %}
+			</p>
+			{% for message in messages %}
+				<p style="color:red; font-size:17px;">
+				{{ message }}
+				</p>
+				<br>
+			{% endfor %}
+
+	</div>
+	<div class="graphs">
+
+	{% if graphs_data %}
+		<div style="display:none;">
+			there are graphs
+		</div>
+		{% for graph in graphs_data %}
+				<embed type='image/svg+xml' src = {{ graph|safe }} />
+				<br>
+		{% endfor %}
+	{% endif %}
+	</div>
+</div>
+
+{% endblock %}
