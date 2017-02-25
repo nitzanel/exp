@@ -257,7 +257,6 @@ def pi_gene(gene_name):
     
     gene_data, noise_data = get_pi_gene(gene_name)
 
-    print('gene_data:'  ,gene_data)
     head_cols = ['ID','gene_name', 'chr','start','end']
     # create graphs for every repeat
     for dataset in gene_data:
@@ -265,22 +264,44 @@ def pi_gene(gene_name):
             all_columns = list(gene_data[dataset][gene_repeat])
             # general information about the gene: chr, name, id, start, end.
             header = dict(all_columns[:5]) 
-            cells_columns = dict(all_columns[5:])
+            cells_column = dict(all_columns[5:])
             # create male data
-            male_data = IFN_male_data = female_data = IFN_female_data = []
-        
+            male_data = []
+            IFN_male_data = []
+            female_data = []
+            IFN_female_data = []
+            noise_level = 0
+            index = 0
+            last_cell_name = ''
+            cells_axis = []
             for cell in cells_column:
                 parts = cell.split('_')
-                exp_level = cells_co
-                if 'm' in parts or 'MALE' in parts:
+                if (parts[0] != last_cell_name):
+                    index +=1 
+                    cells_axis.append((parts[0],index))
+                last_cell_name = parts[0]
+                exp_level = round(float(cells_column[cell]),3)
+                if 'M' in parts or 'male' in parts:
                     # male cell
                     if '10kIFN' in parts or '1kIFN' in parts:
                         # IFN cell
-                        IFN_male_data.appned(cells_column[cell] 
-            # create male_IFN data
-            # create female data
-            # create female_IFN data
-            
+                        IFN_male_data.append((exp_level,index)) 
+                    else:
+                        male_data.append((exp_level,index))
+                elif 'F' in parts or 'female' in parts:
+                    # female cell
+                    if '10kIFN' in parts or '1kIFN' in parts:
+                        # IFN cell
+                        IFN_female_data.append((exp_level,index))
+                    else:
+                        female_data.append((exp_level,index))
+                elif 'noise' in parts:
+                    noise_level = exp_level
+                # create graph for the data
+            # remove the noise from the cells axis
+            cells_axis.pop(-1)
+            print(cells_axis)
+            # remember to change B1ab to B1a and CD19 to B in all cells_axis
 
     return flask.render_template('pan_immune.html',form=search_form)
 
