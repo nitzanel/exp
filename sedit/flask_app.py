@@ -1,5 +1,6 @@
 # libs
 import flask
+from flask import url_for, g, session, render_template
 import os
 import flask_sijax
 from flask_wtf.csrf import CsrfProtect
@@ -15,9 +16,10 @@ app = flask.Flask(__name__)
 sijax_path = os.path.join('.', os.path.dirname(__file__), 'static/js/sijax/')
 app = flask.Flask(__name__.split('.')[0])
 app.secret_key = os.urandom(128)
+
 app.config['SIJAX_STATIC_PATH'] = sijax_path
 # not sure why next line works
-app.config['SIJAX_JSON_URI'] = sijax_path + 'json2.js'#'/static/js/sijax/json2.js'
+#app.config['SIJAX_JSON_URI'] = '/static/js/sijax/json2.js'
 # fixed error with sijax
 flask_sijax.Sijax(app)
 
@@ -70,6 +72,7 @@ def get_autocomplete_names(self, gene_symbol):
     names = list(set(list(map(lambda x:x[0], cursor.fetchall()))))
     return names
 
+# not working
 def autocomplete(obj_response, value):
     if len(value) < 1:
         return
@@ -81,9 +84,7 @@ def autocomplete(obj_response, value):
     else:
         options = get_autocomplete_names(value)
         options = list(map(create_tag, options))
-        ac_helper.change_last(value,options)
-        print "WOW"
-        print options
+        ac_helper.change_last(value,options) 
 		# fill options according to value
         # create a list of tags
         # add autocomplete options, and clear the previous ones.
@@ -101,6 +102,85 @@ def csrf_token():
     return hmac.new(app.secret_key, flask.session["_csrf_token"],
                     digestmod=sha1).hexdigest()
 
+
+# db loading functions #
+def get_datasets_names():
+    db_conn = get_db()
+    cursor = db_conn.cursor()
+    cursor.execute('SELECT name FROM sqlite_master WHERE type="table";')
+    datasets_names = list(map(lambda x:x[0], cursor.fetchall()))
+    return datasets_names
+
+
+def get_columns_names(table_name):
+		query = ' '.join(['SELECT * from',table_name])
+		cursor = get_db().execute(query)
+		names = list(map(lambda x:x[0], cursor.description))
+		return names
+
+
+def get_cells_names(cell_type,dataset):
+    cells = get_colimn_names(dataset)
+    cells_types = [cell_type]
+    cells_names = []
+    if cell_type.upper() == 'B1AB':
+        cells_types.append('B1A')
+    elif cell_type.upper() == 'CD19':
+        cells_types.append('B')
+    elif cell_type.upper() == 'T8':
+        cells_types.append('CD8T')
+    elif cell_type.upper() == 'T4':
+        cells_types.append('CD4T')
+	
+    for cell in cells:
+        for item in cells_types:
+            if item.upper() in cell.upper().split('_'):
+                cells_names.append(cell)
+    return cells_names
+
+
+
+# creates a query
+def get_select_command(value,dataset,cells='ALL',condition='gene_name'):
+    if cells == 'ALL':
+        cells = '*'
+    else:
+        cells = ', '.join(get_cells_names(cells,dataset))
+    command = ' '.join(['SELECT',cells,'from',dataset,'where',condition,'=',''.join(['"',value,'"'])])
+    return command
+
+
+# do a query and get list of data
+def get_gene_data(gene_name, dataset, cells='ALL'):
+    cursor = get_db().execute(get_select_command(gene_name,dataset,cells))
+    data = []
+    for row in cursor:
+        data.append(list(row))
+    return data
+    
+def get_noise(gene_name,dataset):
+    query = ''.join(['SELECT noise from ', dataset,' where gene_name = "', gene_name, '"'])
+    cursor = get_db().execute(query)
+    data = []
+    for row in cursor:
+        data.append(list(row))
+    return data
+
+def get_pi_gene(gene_name):
+    data = {}
+    noise_data = {}
+    datasets = get_datasets_names() 
+    
+    for dataset in datasets:
+        values_list = get_gene_data(gene_name,dataset,'ALL')
+        colms = get_columns_names(dataset)
+        data_tuples = {}
+        for index, values in enumerate(values_list):
+            key = '_'.join(['repeat',str(index+1)])
+            data_tuples[key] = zip(colms,values)
+        data[dataset] = data_tuples
+        noise_data[dataset] = get_noise(gene_name, dataset)
+    return (data, noise_data)
 
 # routes #
 
@@ -120,9 +200,9 @@ def about():
 	# get the pi and ctc graphs examples
     pi_uri = ''
     ctc_uri = ''
-    with open ('sedit/static/data/pi_uri_data', 'r') as f:
+    with open ('static/data/pi_uri_data', 'r') as f:
         pi_uri = f.read()
-    with open ('sedit/static/data/ctc_uri_data', 'r') as f:
+    with open ('static/data/ctc_uri_data', 'r') as f:
         ctc_uri = f.read()
     return flask.render_template('about.html',pi_graph = pi_uri, ctc_graph = ctc_uri)
 
@@ -131,12 +211,12 @@ def about():
 def pan_immune():
     search_form = forms.GeneSearchForm()
     if flask.request.method == 'POST':
+        print ("TEST")
         if flask.g.sijax.is_sijax_request:
-      	    flask.g.sijax.register_callback('autocomplete',autocomplete)
+            flask.g.sijax.register_callback('autocomplete',autocomplete)
             return flask.g.sijax.process_request()
-        else:
-            pi_gene_url = '/'.join(['genes','pan_immune',flask.request.form['gene_name'].upper()])
-            return flask.redirect(pi_gene_url)
+        pi_gene_url = '/'.join(['genes','pan_immune',flask.request.form['gene_name'].upper()])
+        return flask.redirect(pi_gene_url)
     return flask.render_template('pan_immune.html',form=search_form)
 
 
@@ -158,7 +238,7 @@ def hello():
         obj_response.alert('Hi there!')
 
     if flask.g.sijax.is_sijax_request:
-        print "REQUEST"
+        #print "REQUEST"
         flask.g.sijax.register_callback('say_hi', say_hi)
         return flask.g.sijax.process_request()
 
@@ -174,8 +254,48 @@ def ctc_gene(gene_name, cell_type):
 @app.route('/genes/pan_immune/<gene_name>')
 def pi_gene(gene_name):
     search_form = forms.GeneSearchForm()
+    
+    gene_data, noise_data = get_pi_gene(gene_name)
+
+    print('gene_data:'  ,gene_data)
+    head_cols = ['ID','gene_name', 'chr','start','end']
+    # create graphs for every repeat
+    for dataset in gene_data:
+        for gene_repeat in gene_data[dataset]:
+            all_columns = list(gene_data[dataset][gene_repeat])
+            # general information about the gene: chr, name, id, start, end.
+            header = dict(all_columns[:5]) 
+            cells_columns = dict(all_columns[5:])
+            # create male data
+            male_data = IFN_male_data = female_data = IFN_female_data = []
+        
+            for cell in cells_column:
+                parts = cell.split('_')
+                exp_level = cells_co
+                if 'm' in parts or 'MALE' in parts:
+                    # male cell
+                    if '10kIFN' in parts or '1kIFN' in parts:
+                        # IFN cell
+                        IFN_male_data.appned(cells_column[cell] 
+            # create male_IFN data
+            # create female data
+            # create female_IFN data
+            
+
     return flask.render_template('pan_immune.html',form=search_form)
 
+@flask_sijax.route(app,'/test')
+def test():
+    def say_hi(obj_response):
+        obj_response.alert('hi')
+
+    if g.sijax.is_sijax_request:
+        g.sijax.register_callback('say_hi',say_hi)
+        return g.sijax.process_request()
+
+    return render_template('test.html')
+
+
 if __name__ == "__main__":
-	app.run(debug=True)
+	app.run(debug=True,host='0.0.0.0')
 

@@ -1,10 +1,10 @@
 import zipfile
 
 def extractDB():
-	print "extracting database..."
+	print ("extracting database...")
 	zfile = zipfile.ZipFile('db.zip')
 	zfile.extractall()
-	print "database extracted"
+	print ("database extracted")
 
 
 if __name__ == '__main__':
