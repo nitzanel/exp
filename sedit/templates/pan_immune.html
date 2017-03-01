@@ -31,8 +31,22 @@
 		have data!
 		{{ data }}
 	{% endif %}
+    {{ header }}
+	<br>
+    {% if is_extended %} 
+    <a href="{{ url_for('pi_gene',gene_name=gene_name) }}">
+    show repeats (if there are any)
+    </a>
+    {% else %}
+    {% if header %}
+    <a href="{{ url_for('pi_gene_ext',gene_name=gene_name) }}">
+    dont show repeats
+    </a>
+    {% endif %}
+    {% endif %}
+    <br>
 
-	<div class='graphs'>
+    <div class='graphs'>
 	{% if graphs %}
 		<p>
 		Independent datasets are presented in separate figures.
