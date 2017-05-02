@@ -33,15 +33,9 @@
 
 	</div>
 	<div class="graphs">
-
-	{% if graphs_data %}
-		<div style="display:none;">
-			there are graphs
-		</div>
-		{% for graph in graphs_data %}
+    {% if graph %}
 				<embed type='image/svg+xml' src = {{ graph|safe }} />
 				<br>
-		{% endfor %}
 	{% endif %}
 	</div>
 </div>

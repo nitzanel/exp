@@ -25,7 +25,7 @@ app.config['SIJAX_STATIC_PATH'] = sijax_path
 flask_sijax.Sijax(app)
 
 #
-FILTER_VALUE = 1.0
+FILTER_VALUE = 5.0
 
 # change when deploying
 DATABASE = 'database/db.db'
@@ -352,7 +352,7 @@ def create_pi_graphs(gene_name):
                 graph.add('IFN_female',IFN_female_data)
                 graph.add('IFN_male', IFN_male_data)
             graph.x_labels = cells_axis
-            graph.add('Filter line',filter_line, color='#333333')
+            graph.add('Noise threshold',filter_line, color='#333333')
             graphs.append(graph)
     
     return graphs, header
@@ -393,7 +393,7 @@ def create_ctc_graph(gene_name,cell_type, show_repeats=False):
             all_columns = list(gene_data[dataset][gene_repeat])
             for cell in all_columns:
                 parts = cell[0].split('_')
-                exp_level =round(float(all_columns[cell]), 3)
+                exp_level =round(float(cell[1]), 3)
                 max_exp_value = max(exp_level,max_exp_value)
                 if 'M' in parts or 'male' in parts:
                 # male cell
@@ -435,7 +435,7 @@ def create_ctc_graph(gene_name,cell_type, show_repeats=False):
     
     
     filter_line = [(0.1 * x,FILTER_VALUE) for x in range(0,40,2)]
-    graph.add('Filter Line', filter_line)
+    graph.add('Noise threshold', filter_line)
 
     x_labels = []
     x_labels.append({'value':1, 'label':'A'})        
@@ -449,7 +449,7 @@ def create_ctc_graph(gene_name,cell_type, show_repeats=False):
         graph.range = (0,5)
     graph.title = "{} in {} ".format(gene_name, cell_type)
     graph.y_title = "Log2 (expression level)"
-    
+    print ('created graph: {}'.format(graph)) 
     return graph
 # routes #
 
