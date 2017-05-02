@@ -34,7 +34,7 @@
 	</div>
 	<div class="graphs">
     {% if graph %}
-				<embed type='image/svg+xml' src = {{ graph|safe }} />
+				<embed type='image/svg+xml' src = "{{ graph|safe }}" />
 				<br>
 	{% endif %}
 	</div>

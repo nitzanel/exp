@@ -146,7 +146,7 @@ def get_select_command(value,dataset,cells='ALL',condition='gene_name'):
         cells = '*'
     else:
         cells = ', '.join(get_cells_names(cells,dataset))
-    command = ' '.join(['SELECT',cells,'from',dataset,'where',condition,'=',''.join(['"',value,'"'])])
+    command = ' '.join(['SELECT',cells,'from',dataset,'where',condition,'=',''.join(['"',value,'";'])])
     return command
 
 
@@ -156,6 +156,15 @@ def get_gene_data(gene_name, dataset, cells='ALL'):
     data = []
     for row in cursor:
         data.append(list(row))
+    if cells != 'ALL':
+        cell_names = get_cells_names(cells,dataset)
+        new_data = []
+        for row in data:
+            zipped = list(zip(cell_names,row))
+            new_data.append(zipped)
+
+        return new_data
+
     return data
     
 def get_noise(gene_name,dataset):
@@ -166,22 +175,25 @@ def get_noise(gene_name,dataset):
         data.append(list(row))
     return data
 
-
 def get_ctc_gene(gene_name,cell_type):
     data = {}
     noise_data = {}
     datasets = get_datasets_names()
-    
+
     for dataset in datasets:
         values_list = get_gene_data(gene_name,dataset,cell_type)
+        print(values_list)
         #print ('dataset:',dataset)
         colms = get_columns_names(dataset)
         data_tuples = {}
-        for index, values in enumerate(values_list):
+        for index, row in enumerate(values_list):
             key = '_'.join(['repeat',str(index+1)])
-            data_tuples[key] = zip(colms,values)
+            data_tuples[key] = row
         data[dataset] = data_tuples
+    print (data)
     return data
+
+
 
 def get_pi_gene(gene_name):
     data = {}
@@ -360,7 +372,9 @@ def create_pi_graphs(gene_name):
 
 # create a ctc-graph
 def create_ctc_graph(gene_name,cell_type, show_repeats=False):
+    print ('create_ctc_graph called')
     gene_data = get_ctc_gene(gene_name,cell_type)
+    print(gene_data)
     graphs = []
     header = []
     index = 0
@@ -387,8 +401,7 @@ def create_ctc_graph(gene_name,cell_type, show_repeats=False):
         IFN_male_data = []
         female_data = []
         IFN_female_data = []
-      
-        for gene_repeat in gene_data[dataset]:    
+        for gene_repeat in gene_data[dataset]:
             cells_axis = []
             all_columns = list(gene_data[dataset][gene_repeat])
             for cell in all_columns:
@@ -410,10 +423,10 @@ def create_ctc_graph(gene_name,cell_type, show_repeats=False):
                     else:
                         female_data.append((index-0.1,exp_level))
      
-            IFN_male += IFN_male_data
-            IFN_female += IFN_female_data
-            male += male_data
-            female += female_data
+        IFN_male += IFN_male_data
+        IFN_female += IFN_female_data
+        male += male_data
+        female += female_data
     # all data prepared
     style = ctc_style_3
     if cell_type in ['GN','MF','B']:
@@ -444,7 +457,7 @@ def create_ctc_graph(gene_name,cell_type, show_repeats=False):
     x_labels.append({'value':4, 'label':'D'})
     graph.x_labels = x_labels
     if max_exp_value >5:
-        graph.range = (max_exp_value+1)
+        graph.range = (0,max_exp_value+1)
     else:
         graph.range = (0,5)
     graph.title = "{} in {} ".format(gene_name, cell_type)
@@ -507,7 +520,7 @@ def cell_type_specific():
 def ctc_gene(gene_name, cell_type):
     form = forms.CellTypeSpecificForm()
     graph= create_ctc_graph(gene_name,cell_type) 
- 
+    graph= graph.render_data_uri() 
     return flask.render_template(
                                 'cell_type_specific.html',
                                 graph=graph,
